@@ -1,82 +1,146 @@
 import numpy as np
 import matplotlib.pyplot as plt
-
 from sklearn.feature_extraction import image
 from sklearn.cluster import spectral_clustering
 import cv2
-from PIL import Image
+import os
+from tkinter import *
+#from tkFileDialog import askopenfilename
+from PIL import Image, ImageTk
 
-l = 100
-x, y = np.indices((l, l))
+# function to show an image
+def showImage(img_to_show):
+	img_to_show = img_to_show.resize((100, 100), Image.ANTIALIAS)
+	img_to_show = np.asarray(img_to_show)
+	img_to_show = img_to_show[:, :, 0]
+	img_to_show = img_to_show.astype(float)
+	plt.matshow(img_to_show)
+	plt.show()
 
-center1 = (28, 24)
-center2 = (40, 50)
-center3 = (67, 58)
-center4 = (24, 70)
+# Region Growing
+class Queue:
+	def __init__(self):
+		self.items = []
 
-radius1, radius2, radius3, radius4 = 16, 14, 15, 14
+	def isEmpty(self):
+		return self.items==[]
 
-circle1 = (x - center1[0]) ** 2 + (y - center1[1]) ** 2 < radius1 ** 2
-circle2 = (x - center2[0]) ** 2 + (y - center2[1]) ** 2 < radius2 ** 2
-circle3 = (x - center3[0]) ** 2 + (y - center3[1]) ** 2 < radius3 ** 2
-circle4 = (x - center4[0]) ** 2 + (y - center4[1]) ** 2 < radius4 ** 2
+	def enque(self,item):
+		self.items.insert(0,item)
 
-# # #############################################################################
-# # 4 circles
-# img = circle1 + circle2 + circle3 + circle4
+	def deque(self):
+		return self.items.pop()
 
-# # We use a mask that limits to the foreground: the problem that we are
-# # interested in here is not separating the objects from the background,
-# # but separating them one from the other.
-# mask = img.astype(bool)
+	def qsize(self):
+		return len(self.items)
 
-# img = img.astype(float)
-# img += 1 + 0.2 * np.random.randn(*img.shape)
+	def isInside(self, item):
+		return (item in self.items)
 
-# # Convert the image into a graph with the value of the gradient on the
-# # edges.
-# graph = image.img_to_graph(img, mask=mask)
+def regiongrow(src_image, dest_image, epsilon, start_point):
+	Q = Queue()
+	s = []
 
-# # Take a decreasing function of the gradient: we take it weakly
-# # dependent from the gradient the segmentation is close to a voronoi
-# graph.data = np.exp(-graph.data / graph.data.std())
+	x = start_point[0]
+	y = start_point[1]
 
-# # Force the solver to be arpack, since amg is numerically
-# # unstable on this example
-# labels = spectral_clustering(graph, n_clusters=4, eigen_solver='arpack')
-# label_im = np.full(mask.shape, -1.)
-# label_im[mask] = labels
+	image = src_image.convert("L")
+	Q.enque((x,y))
 
-# plt.matshow(img)
-# plt.matshow(label_im)
+	while not Q.isEmpty():
+		t = Q.deque()
+		x = t[0]
+		y = t[1]
 
-# # #############################################################################
-# 2 circles
-# img = circle1 + circle2
-# img = cv2.imread("circle.jpg")
-# img = io.imread('circle.jpg')
-# print(img.shape)
-# img = img[0:100][0:100]
-# print(img.shape)
-img = Image.open('circle.jpg')
-img1 = img.resize((100, 100), Image.ANTIALIAS)
-img1 = np.asarray(img1)
-img1 = img1[:, :, 0]
+		if x < image.size[0]-1 and abs(image.getpixel( (x + 1 , y) ) - image.getpixel( (x , y) )  ) <= epsilon :
+			if not Q.isInside( (x + 1 , y) ) and not (x + 1 , y) in s:
+				Q.enque( (x + 1 , y) )
+		
+		if x > 0 and abs(image.getpixel( (x - 1 , y) ) - image.getpixel( (x , y) )  ) <= epsilon:
+			if not Q.isInside( (x - 1 , y) ) and not (x - 1 , y) in s:
+				Q.enque( (x - 1 , y) )
 
-img1 = img1.astype(float)
-mask = img1.astype(bool)
-print(img1.shape)
+		if y < (image.size[1] - 1) and abs(image.getpixel( (x , y + 1) ) - image.getpixel( (x , y) )  ) <= epsilon:
+			if not Q.isInside( (x, y + 1) ) and not (x , y + 1) in s:
+				Q.enque( (x , y + 1) )
 
-img1 += 1 + 0.2 * np.random.randn(*img1.shape)
+		if y > 0 and abs(  image.getpixel( (x , y - 1) ) - image.getpixel( (x , y) )  ) <= epsilon:
+			if not Q.isInside( (x , y - 1) ) and not (x , y - 1) in s:
+				Q.enque( (x , y - 1) )
 
-graph = image.img_to_graph(img1, mask=mask)
-graph.data = np.exp(-graph.data / graph.data.std())
+		if t not in s:
+			s.append( t )
 
-labels = spectral_clustering(graph, n_clusters=5, eigen_solver='arpack')
-label_im = np.full(mask.shape, -1.)
-label_im[mask] = labels
+	dest_image.load()
+	putpixel = dest_image.im.putpixel
 
-plt.matshow(img1)
-plt.matshow(label_im)
+	for i in s:
+		putpixel(i , 150)
 
-plt.show()
+	# showImage(dest_image)
+	# showImage(src_image)
+
+if __name__ == "__main__":
+	root = Tk()
+
+	#setting up a tkinter canvas with scrollbars
+	frame = Frame(root, bd=2, relief=SUNKEN)
+	frame.grid_rowconfigure(0, weight=1)
+	frame.grid_columnconfigure(0, weight=1)
+	xscroll = Scrollbar(frame, orient=HORIZONTAL)
+	xscroll.grid(row=1, column=0, sticky=E+W)
+	yscroll = Scrollbar(frame)
+	yscroll.grid(row=0, column=1, sticky=N+S)
+	canvas = Canvas(frame, bd=0, xscrollcommand=xscroll.set, yscrollcommand=yscroll.set)
+	canvas.grid(row=0, column=0, sticky=N+S+E+W)
+	xscroll.config(command=canvas.xview)
+	yscroll.config(command=canvas.yview)
+	frame.pack(fill=BOTH,expand=1)
+
+	#adding the image
+	#File = askopenfilename(parent=root, initialdir="C:/",title='Choose an image.')
+	pixelVal = 10
+	img = Image.open('circle.jpg')
+	img1 = img.resize((100, 100), Image.ANTIALIAS)
+	img1_copy = img.resize((100, 100), Image.ANTIALIAS)
+	
+	for i in range (img1_copy.size[0] ):
+		for j in range (img1_copy.size[1] ):
+			img1_copy.im.putpixel( (i , j) , 0 )
+
+	img2 = ImageTk.PhotoImage(img1)
+	canvas.create_image(0,0,image=img2,anchor="nw")
+	canvas.config(scrollregion=canvas.bbox(ALL))
+
+	#function to be called when mouse is clicked
+	def printcoords(event):
+		print (event.x,event.y)
+		regiongrow(img1, img1_copy, 5, [event.x, event.y])
+		
+	# mouseclick event
+	canvas.bind("<Button 1>", printcoords)
+
+	root.mainloop()
+
+	# Spectral Clustering
+	final_img = np.asarray(img1_copy)
+	final_img = final_img[:, :, 0]
+
+	final_img = final_img.astype(float)
+	mask = final_img.astype(bool)
+	print(final_img.shape)
+
+	final_img += 1 + 0.2 * np.random.randn(*final_img.shape)
+
+	graph = image.img_to_graph(final_img, mask=mask)
+	graph.data = np.exp(-graph.data / graph.data.std())
+
+	labels = spectral_clustering(graph, n_clusters=8, eigen_solver='arpack')
+	label_im = np.full(mask.shape, -1.)
+	label_im[mask] = labels
+
+	showImage(img1)
+	showImage(img1_copy)
+	plt.matshow(label_im)
+
+	plt.show()
