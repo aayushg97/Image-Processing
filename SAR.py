@@ -10,11 +10,11 @@ from PIL import Image, ImageTk
 
 # function to show an image
 def showImage(img_to_show):
-	img_to_show = img_to_show.resize((100, 100), Image.ANTIALIAS)
+	img_to_show = img_to_show.resize((200, 200))
 	img_to_show = np.asarray(img_to_show)
-	img_to_show = img_to_show[:, :, 0]
+	#img_to_show = img_to_show[:, :]
 	img_to_show = img_to_show.astype(float)
-	plt.matshow(img_to_show)
+	plt.imshow(img_to_show, cmap='gray')
 	plt.show()
 
 # Region Growing
@@ -75,7 +75,7 @@ def regiongrow(src_image, dest_image, epsilon, start_point):
 	putpixel = dest_image.im.putpixel
 
 	for i in s:
-		putpixel(i , 150)
+		putpixel(i , 255)
 
 	# showImage(dest_image)
 	# showImage(src_image)
@@ -100,9 +100,8 @@ if __name__ == "__main__":
 	#adding the image
 	#File = askopenfilename(parent=root, initialdir="C:/",title='Choose an image.')
 	pixelVal = 10
-	img = Image.open('circle.jpg')
-	img1 = img.resize((100, 100), Image.ANTIALIAS)
-	img1_copy = img.resize((100, 100), Image.ANTIALIAS)
+	img1 = Image.open('circle.jpg').convert('L').resize((200, 200))
+	img1_copy = img1.resize((200, 200))
 	
 	for i in range (img1_copy.size[0] ):
 		for j in range (img1_copy.size[1] ):
@@ -116,6 +115,7 @@ if __name__ == "__main__":
 	def printcoords(event):
 		print (event.x,event.y)
 		regiongrow(img1, img1_copy, 5, [event.x, event.y])
+
 		
 	# mouseclick event
 	canvas.bind("<Button 1>", printcoords)
@@ -123,8 +123,11 @@ if __name__ == "__main__":
 	root.mainloop()
 
 	# Spectral Clustering
+	#print("Checking...")
+	#showImage(img1_copy)
 	final_img = np.asarray(img1_copy)
-	final_img = final_img[:, :, 0]
+	print(final_img.shape)
+	#final_img = final_img[:, :]
 
 	final_img = final_img.astype(float)
 	mask = final_img.astype(bool)
@@ -135,12 +138,12 @@ if __name__ == "__main__":
 	graph = image.img_to_graph(final_img, mask=mask)
 	graph.data = np.exp(-graph.data / graph.data.std())
 
-	labels = spectral_clustering(graph, n_clusters=8, eigen_solver='arpack')
+	labels = spectral_clustering(graph, n_clusters=5, eigen_solver='arpack')
 	label_im = np.full(mask.shape, -1.)
 	label_im[mask] = labels
 
 	showImage(img1)
 	showImage(img1_copy)
-	plt.matshow(label_im)
+	plt.imshow(label_im, cmap='gray')
 
 	plt.show()
