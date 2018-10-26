@@ -8,6 +8,7 @@ from tkinter import *
 #from tkFileDialog import askopenfilename
 from PIL import Image, ImageTk
 
+seed_count = 0
 # function to show an image
 def showImage(img_to_show):
 	img_to_show = img_to_show.resize((200, 200))
@@ -80,6 +81,10 @@ def regiongrow(src_image, dest_image, epsilon, start_point):
 	# showImage(dest_image)
 	# showImage(src_image)
 
+def inc_seed_count():
+	global seed_count
+	seed_count += 1
+
 if __name__ == "__main__":
 	root = Tk()
 
@@ -100,7 +105,7 @@ if __name__ == "__main__":
 	#adding the image
 	#File = askopenfilename(parent=root, initialdir="C:/",title='Choose an image.')
 	pixelVal = 10
-	img1 = Image.open('circle.jpg').convert('L').resize((200, 200))
+	img1 = Image.open('sar.png').convert('L').resize((200, 200))
 	img1_copy = img1.resize((200, 200))
 	
 	for i in range (img1_copy.size[0] ):
@@ -113,8 +118,9 @@ if __name__ == "__main__":
 
 	#function to be called when mouse is clicked
 	def printcoords(event):
+		inc_seed_count()
 		print (event.x,event.y)
-		regiongrow(img1, img1_copy, 5, [event.x, event.y])
+		regiongrow(img1, img1_copy, 7, [event.x, event.y])
 
 		
 	# mouseclick event
@@ -138,7 +144,7 @@ if __name__ == "__main__":
 	graph = image.img_to_graph(final_img, mask=mask)
 	graph.data = np.exp(-graph.data / graph.data.std())
 
-	labels = spectral_clustering(graph, n_clusters=5, eigen_solver='arpack')
+	labels = spectral_clustering(graph, n_clusters=seed_count, eigen_solver='arpack')
 	label_im = np.full(mask.shape, -1.)
 	label_im[mask] = labels
 
