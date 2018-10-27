@@ -7,6 +7,7 @@ import os
 from tkinter import *
 #from tkFileDialog import askopenfilename
 from PIL import Image, ImageTk
+from PIL import ImageFilter
 
 seed_count = 0
 # function to show an image
@@ -105,8 +106,9 @@ if __name__ == "__main__":
 	#adding the image
 	#File = askopenfilename(parent=root, initialdir="C:/",title='Choose an image.')
 	pixelVal = 10
-	img1 = Image.open('sar5.png').convert('L').resize((200, 200))
-	img1_copy = img1.resize((200, 200))
+	img1 = Image.open('sar6.png').convert('L').resize((200, 200))
+	img1 = img1.filter(ImageFilter.BoxBlur(1))
+	img1_copy = img1.resize((200, 200))	
 	
 	for i in range (img1_copy.size[0] ):
 		for j in range (img1_copy.size[1] ):
@@ -120,7 +122,7 @@ if __name__ == "__main__":
 	def printcoords(event):
 		inc_seed_count()
 		print (event.x,event.y)
-		regiongrow(img1, img1_copy, 20, [event.x, event.y])
+		regiongrow(img1, img1_copy, 5, [event.x, event.y])
 
 		
 	# mouseclick event
